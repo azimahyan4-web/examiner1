@@ -672,7 +672,13 @@ async function onRunAIMark(id, btn) {
   panel.innerHTML = `<p class="helper-text">Claude is reading the submission…</p>`;
   const res = await markWithAI(id);
   btn.disabled = false; btn.textContent = 'Mark with Claude';
-  if (!res.ok) { panel.innerHTML = `<p class="msg err">${esc(res.error || 'Something went wrong while marking.')}</p>`; return; }
+  if (!res.ok) {
+    let msg = esc(res.error || 'Something went wrong while marking.');
+    if (res.stopReason) msg += `<br><span style="color:var(--text-soft); font-size:12px;">Stop reason: ${esc(res.stopReason)}</span>`;
+    if (res.rawResponsePreview) msg += `<br><details style="margin-top:6px;"><summary style="cursor:pointer; color:var(--text-soft); font-size:12px;">Show Claude's raw reply</summary><pre style="white-space:pre-wrap; font-size:11.5px; background:#F9FAFB; padding:8px; border-radius:6px; margin-top:6px;">${esc(res.rawResponsePreview)}</pre></details>`;
+    panel.innerHTML = `<p class="msg err">${msg}</p>`;
+    return;
+  }
   renderAIResult(id, res);
 }
 
