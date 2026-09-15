@@ -52,7 +52,7 @@ async function handleRequest(req, res) {
   const scheme = await kvGet(schemeKey(submission.year, submission.session, submission.unit));
   if (!scheme) return res.status(200).json({ ok: false, error: 'No mark scheme found for this paper.' });
 
-  let system = 'You are an exam marker. You will be given a mark scheme (as an image, PDF, or text) and a student\'s scanned answer pages. Read everything carefully, including handwriting, then grade the answer strictly against the mark scheme, awarding partial credit where the scheme allows it. Work out the maximum possible score from the mark scheme itself. Do NOT write out any page-by-page notes, working, or analysis anywhere in your response \u2014 do all of that silently and output nothing but the final result. Your entire response must be a single raw JSON object and nothing else: no markdown, no code fences, no preamble, no explanation before or after it. Start your response immediately with { and end it with }, in this exact shape: {"score": <number>, "max": <number>, "feedback": "<2-4 sentences of constructive feedback written directly to the student>"}';
+  let system = 'You are an exam marker. You will be given a mark scheme (as an image, PDF, or text) and a student\'s scanned answer pages. Read everything carefully, including handwriting, then grade the answer strictly against the mark scheme question by question, awarding partial credit where the scheme allows it. Do NOT write out any page-by-page notes, working, or analysis anywhere in your response \u2014 do all of that silently and output nothing but the final result. Your entire response must be a single raw JSON object and nothing else: no markdown, no code fences, no preamble, no explanation before or after it. Start your response immediately with { and end it with }, in this exact shape: {"score": <total marks awarded, number>, "max": <total marks available, number>, "feedback": "<2-4 sentences of overall constructive feedback written directly to the student>", "questions": [{"question": "<question number/label exactly as it appears on the paper, e.g. 1(a) or 6(b)(ii)>", "marksAwarded": <number>, "marksAvailable": <number>, "pointsAwarded": ["<short phrase for each mark scheme point the student correctly hit>"], "pointsMissed": ["<short phrase for each mark scheme point the student missed or got wrong>"]}]}. Include one entry in "questions" for every question or sub-part present in the mark scheme, in order. If a question has no distinct marking points (e.g. a single-mark MCQ), pointsAwarded/pointsMissed can just be a single short phrase each (or an empty array for whichever doesn\'t apply). The overall "score" and "max" must equal the sum of all the individual "marksAwarded" and "marksAvailable" values.';
   if (scheme.guidance) {
     system += '\n\nAdditional marking guidance from the teacher for this specific paper, which takes priority over your own judgement where it conflicts with the printed scheme: ' + scheme.guidance;
   }
@@ -79,7 +79,7 @@ async function handleRequest(req, res) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 1500,
+      max_tokens: 4000,
       thinking: { type: 'disabled' },
       system: system,
       messages: [{ role: 'user', content: content }]
@@ -117,7 +117,14 @@ async function handleRequest(req, res) {
   const score = Number(parsed.score);
   const max = Number(parsed.max) || 100;
   if (isNaN(score)) return res.status(200).json({ ok: false, error: "Claude's response didn't include a usable score." });
-  return res.status(200).json({ ok: true, score, max, feedback: String(parsed.feedback || '') });
+  const questions = Array.isArray(parsed.questions) ? parsed.questions.map(q => ({
+    question: String(q.question || ''),
+    marksAwarded: Number(q.marksAwarded) || 0,
+    marksAvailable: Number(q.marksAvailable) || 0,
+    pointsAwarded: Array.isArray(q.pointsAwarded) ? q.pointsAwarded.map(String) : [],
+    pointsMissed: Array.isArray(q.pointsMissed) ? q.pointsMissed.map(String) : []
+  })) : [];
+  return res.status(200).json({ ok: true, score, max, feedback: String(parsed.feedback || ''), questions });
 }
 
 export const config = {
