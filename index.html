@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAL Biology Marker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --purple:#6D28D9;
+    --purple-dark:#5B21B6;
+    --purple-soft:#F1EBFC;
+    --bg:#F5F4FB;
+    --card:#FFFFFF;
+    --border:#E5E7EB;
+    --text:#111827;
+    --text-soft:#6B7280;
+    --green-bg:#DCFCE7;
+    --green-text:#15803D;
+    --amber-bg:#FEF3C7;
+    --amber-text:#92400E;
+    --amber-border:#FDE68A;
+    --red-text:#B91C1C;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;}
+  h1,h2,h3{margin:0; font-weight:700;}
+  button{font-family:inherit; cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  a{color:inherit;}
+
+  #loginScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg);}
+  .login-card{width:100%; max-width:380px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06); padding:36px 32px;}
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .brand-badge{width:30px; height:30px; border-radius:8px; background:var(--purple); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0;}
+  .brand h1{font-size:20px; letter-spacing:-0.01em;}
+  .tagline{color:var(--text-soft); font-size:13.5px; margin:6px 0 26px; line-height:1.5;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;}
+  .field input, .field select{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:14px; color:var(--text); outline:none; transition:border-color .15s;}
+  .field input:focus, .field select:focus{border-color:var(--purple);}
+  .login-btn{width:100%; margin-top:6px; padding:11px; background:var(--purple); color:#fff; border:none; border-radius:8px; font-size:14.5px; font-weight:600; transition:background .15s;}
+  .login-btn:hover{background:var(--purple-dark);}
+  .login-btn:disabled{background:#C4B5FD; cursor:not-allowed;}
+  .login-hint{margin-top:20px; padding-top:16px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-soft); line-height:1.7;}
+  .login-error{color:var(--red-text); font-size:13px; margin-top:-6px; margin-bottom:14px; min-height:16px;}
+
+  #app{display:none; min-height:100vh;}
+  .topbar{background:#fff; border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between;}
+  .topbar .brand h1{font-size:16px;}
+  .topbar-actions{display:flex; gap:10px; align-items:center;}
+  .btn-outline{background:#fff; border:1px solid var(--border); color:var(--text); padding:8px 14px; border-radius:8px; font-size:13.5px; font-weight:500;}
+  .btn-outline:hover{border-color:var(--purple); color:var(--purple);}
+  .pill-chip{background:var(--purple-soft); color:var(--purple); padding:6px 14px; border-radius:999px; font-size:13px; font-weight:600;}
+
+  .main{max-width:980px; margin:0 auto; padding:36px 24px 60px;}
+  .page-title{font-size:28px; margin-bottom:6px;}
+  .page-sub{color:var(--text-soft); font-size:14px; margin-bottom:26px;}
+
+  .stat-row{display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:150px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 22px;}
+  .stat .num{font-size:30px; font-weight:800;}
+  .stat .lbl{font-size:13px; color:var(--text-soft); margin-top:2px;}
+
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px 28px; margin-bottom:22px;}
+  .panel h2{font-size:17px; margin-bottom:4px;}
+  .panel .panel-sub{font-size:13.5px; color:var(--text-soft); margin-bottom:20px; line-height:1.5;}
+
+  .grid3{display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:6px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end;}
+  @media (max-width:680px){ .grid3{grid-template-columns:1fr;} .grid2{grid-template-columns:1fr;} }
+  .f label{display:block; font-size:13px; font-weight:600; margin-bottom:6px;}
+  .f input, .f select, .f textarea{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:13.5px; outline:none;}
+  .f input:focus, .f select:focus, .f textarea:focus{border-color:var(--purple);}
+  .helper-text{font-size:12.5px; color:var(--text-soft); margin-top:10px;}
+
+  .btn{padding:10px 18px; background:var(--purple); color:#fff; border:none; border-radius:8px; font-size:13.5px; font-weight:600;}
+  .btn:hover{background:var(--purple-dark);}
+  .btn:disabled{background:#C4B5FD; cursor:not-allowed;}
+  .btn-block{width:100%; padding:13px; font-size:14.5px;}
+  .btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text-soft); padding:9px 16px; border-radius:8px; font-size:13px;}
+  .btn-ghost:hover{border-color:var(--purple); color:var(--purple);}
+
+  .dropzone{border:2px dashed var(--border); border-radius:12px; padding:36px 20px; text-align:center; cursor:pointer; transition:.15s; background:#FBFAFF;}
+  .dropzone:hover, .dropzone.dragover{border-color:var(--purple); background:var(--purple-soft);}
+  .dropzone .arrow{font-size:20px; color:var(--text-soft); margin-bottom:8px;}
+  .dropzone .dz-title{font-weight:700; font-size:15px; margin-bottom:4px;}
+  .dropzone .dz-sub{font-size:12.5px; color:var(--text-soft);}
+  .dropzone.small{padding:20px;}
+  .dropzone.small .dz-title{font-size:14px;}
+
+  .list-item{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; border:1px solid var(--border); border-radius:10px; margin-top:10px;}
+  .list-item .li-title{font-weight:700; font-size:14px;}
+  .list-item .li-sub{font-size:12.5px; color:var(--text-soft); margin-top:2px;}
+  .list-item .li-right{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+  .pill{font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px;}
+  .pill-green{background:var(--green-bg); color:var(--green-text);}
+  .pill-amber{background:var(--amber-bg); color:var(--amber-text);}
+  .pill-gray{background:#F3F4F6; color:var(--text-soft);}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-soft); padding:0 10px 10px; border-bottom:1px solid var(--border); font-weight:700;}
+  td{padding:12px 10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .empty-row td{color:var(--text-soft); text-align:center; padding:26px 10px; font-size:13.5px;}
+  .score-cell{font-weight:700; color:var(--purple);}
+
+  .msg{font-size:13px; margin:10px 0 0; min-height:16px;}
+  .msg.ok{color:var(--green-text);}
+  .msg.err{color:var(--red-text);}
+  .remove-x{background:none; border:none; color:var(--text-soft); font-size:12.5px; padding:2px 6px;}
+  .remove-x:hover{color:var(--red-text);}
+
+  .thumb{position:relative; width:80px; height:104px; border:1px solid var(--border); border-radius:8px; background:#fff; overflow:hidden;}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .thumb .thumb-remove{position:absolute; top:3px; right:3px; width:18px; height:18px; line-height:18px; text-align:center; font-size:12px; background:rgba(17,24,39,0.75); color:#fff; border:none; border-radius:5px; padding:0;}
+  .thumb .thumb-page{position:absolute; bottom:0; left:0; right:0; background:rgba(17,24,39,0.75); color:#fff; font-size:10px; text-align:center; padding:2px 0;}
+  .add-tile{width:80px; height:104px; border:2px dashed var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text-soft); cursor:pointer; background:#FBFAFF;}
+  .add-tile:hover{border-color:var(--purple); color:var(--purple);}
+
+  .modal-bg{display:none; position:fixed; inset:0; background:rgba(17,24,39,0.5); align-items:center; justify-content:center; z-index:50;}
+  .modal{background:#fff; width:100%; max-width:360px; padding:28px 26px; border-radius:14px;}
+  .modal h3{font-size:18px; margin-bottom:4px;}
+  .modal .sub{font-size:13px; color:var(--text-soft); margin-bottom:18px;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+  .modal-actions .btn-ghost{flex:1; text-align:center;}
+  .modal-actions .btn{flex:1;}
+
+  .feedback-box{font-size:13px; color:var(--text); background:var(--purple-soft); border-left:3px solid var(--purple); padding:10px 14px; border-radius:0 8px 8px 0; margin-top:6px;}
+
+  .select-cards{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:14px; margin-bottom:24px;}
+  .select-card{background:#fff; border:2px solid var(--border); border-radius:12px; padding:18px; cursor:pointer; transition:.12s;}
+  .select-card:hover{border-color:#C4B5FD;}
+  .select-card.selected{border-color:var(--purple); background:var(--purple-soft);}
+  .select-card .sc-title{font-size:21px; font-weight:800;}
+  .select-card .sc-sub{font-size:12.5px; color:var(--text-soft); margin-top:3px;}
+  .step-label{font-size:15px; font-weight:700; margin-bottom:12px;}
+
+  .warning-banner{display:flex; gap:12px; background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:12px; padding:16px 18px; margin-bottom:22px;}
+  .warning-banner .wb-icon{font-size:18px; flex-shrink:0; line-height:1.4;}
+  .warning-banner .wb-title{font-weight:700; color:var(--amber-text); font-size:14px; margin-bottom:4px;}
+  .warning-banner .wb-body{font-size:13px; color:#78350F; line-height:1.6;}
+
+  .two-col{display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;}
+  @media (max-width:800px){ .two-col{grid-template-columns:1fr;} }
+  .side-panel{background:#fff; border:1px solid var(--border); border-radius:14px; padding:22px;}
+  .side-panel h3{font-size:15.5px; margin-bottom:6px;}
+  .side-panel .sp-note{font-size:12.5px; color:var(--text-soft); line-height:1.5; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border);}
+  .side-panel .sp-row{margin-bottom:14px;}
+  .side-panel .sp-label{font-size:12px; color:var(--text-soft);}
+  .side-panel .sp-value{font-size:14.5px; font-weight:700; margin-top:2px;}
+
+  .loading-overlay{position:fixed; inset:0; background:rgba(255,255,255,0.6); display:none; align-items:center; justify-content:center; z-index:100; font-size:14px; color:var(--purple); font-weight:600;}
+
+  @media (max-width:640px){ .topbar{padding:12px 16px;} .main{padding:24px 16px 50px;} }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">Loading…</div>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand"><div class="brand-badge">B</div><h1>IAL Biology Marker</h1></div>
+    <p class="tagline">Sign in to view results, mark papers, or manage access.</p>
+    <form id="loginForm">
+      <div class="field"><label for="loginUser">Username</label><input id="loginUser" type="text" autocomplete="username" required></div>
+      <div class="field"><label for="loginPass">Password</label><input id="loginPass" type="password" autocomplete="current-password" required></div>
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="login-btn" id="loginBtn">Log in</button>
+    </form>
+    <div class="login-hint">Teachers and students are given access by the admin (or a teacher), with a temporary password you can change after logging in.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><div class="brand-badge">B</div><h1 id="topbarTitle">IAL Biology Marker</h1></div>
+    <div class="topbar-actions" id="topbarActions"></div>
+  </div>
+  <div class="main" id="mainContent"></div>
+</div>
+
+<div class="modal-bg" id="pwModalBg">
+  <div class="modal">
+    <h3>Change password</h3>
+    <div class="sub" id="pwModalSub">Update the password for your account.</div>
+    <form id="pwForm">
+      <div class="field"><label>Current password</label><input type="password" id="pwCurrent" required></div>
+      <div class="field"><label>New password</label><input type="password" id="pwNew" required minlength="6"></div>
+      <div class="field"><label>Confirm new password</label><input type="password" id="pwConfirm" required minlength="6"></div>
+      <div class="msg err" id="pwMsg"></div>
+      <div class="modal-actions"><button type="button" class="btn-ghost" id="pwCancel">Cancel</button><button type="submit" class="btn">Update</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   API LAYER — everything talks to the serverless functions in /functions/api
+   ========================================================================= */
+async function apiPost(path, body) {
+  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  try { return await res.json(); }
+  catch (e) { return { ok: false, error: 'Server error (' + res.status + ').' }; }
+}
+function withActor(extra) {
+  return Object.assign({ actorUsername: session.username, actorPassword: session.password }, extra || {});
+}
+const authApi = (action, extra) => apiPost('/api/auth', Object.assign({ action }, extra || {}));
+const authApiActed = (action, extra) => apiPost('/api/auth', Object.assign({ action }, withActor(extra)));
+const schemesApi = (action, extra) => apiPost('/api/schemes', Object.assign({ action }, withActor(extra)));
+const marksApi = (action, extra) => apiPost('/api/marks', Object.assign({ action }, withActor(extra)));
+const settingsApi = (action, extra) => apiPost('/api/settings', Object.assign({ action }, withActor(extra)));
+const markWithAI = (id) => apiPost('/api/mark-with-ai', withActor({ id }));
+
+function showLoading(on) { document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none'; }
+
+const QUALIFICATION_LABEL = 'International Advanced Level';
+const SUBJECT_LABEL = 'Advanced Biology';
+const SESSIONS = ['January', 'June', 'October'];
+const UNITS = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6'];
+
+let session = null; // { role, username, password } — persisted in sessionStorage so reloads don't log you out
+const SESSION_KEY = 'markbook_session';
+
+/* =========================================================================
+   LOGIN
+   ========================================================================= */
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const res = await authApi('login', { username: u, password: p });
+  btn.disabled = false; btn.textContent = 'Log in';
+  if (!res.ok) { errEl.textContent = res.error || 'Something went wrong.'; return; }
+  session = { role: res.role, username: res.username, password: p };
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+  enterApp();
+});
+
+function doLogout() {
+  session = null;
+  try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginForm').reset();
+  document.getElementById('loginError').textContent = '';
+}
+
+function enterApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('loginForm').reset();
+  studentView = 'select';
+  studentSelection = { year: null, session: null, unit: null };
+  studentPages = [];
+  render();
+}
+
+async function render() {
+  document.getElementById('topbarTitle').textContent = 'IAL Biology Marker';
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '';
+  renderTopbarActions();
+  showLoading(true);
+  try {
+    if (session.role === 'admin') await renderAdmin(main);
+    else if (session.role === 'teacher') await renderTeacher(main);
+    else if (session.role === 'student') await renderStudent(main);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderTopbarActions() {
+  const wrap = document.getElementById('topbarActions');
+  if (session.role !== 'student') {
+    wrap.innerHTML = `<button class="btn-outline" id="changePwBtn">Change password</button><button class="btn-outline" id="logoutBtn">Log out</button>`;
+    document.getElementById('changePwBtn').addEventListener('click', openPwModal);
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+    return;
+  }
+  if (studentView === 'upload') {
+    const s = studentSelection;
+    wrap.innerHTML = `<span class="pill-chip">${esc(s.year)} • ${esc(s.session)} • ${esc(s.unit)}</span><button class="btn-outline" id="changePaperBtn">Change paper</button>`;
+    document.getElementById('changePaperBtn').addEventListener('click', () => { studentView = 'select'; render(); });
+  } else {
+    wrap.innerHTML = `<span class="pill-chip">${esc(session.username)}</span><button class="btn-outline" id="logoutBtn">Log out</button>`;
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  }
+}
+
+/* =========================================================================
+   SHARED HELPERS
+   ========================================================================= */
+function esc(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
+function yearOptions() { const now = new Date().getFullYear(); let opts = ''; for (let y = now + 1; y >= now - 5; y--) opts += `<option value="${y}">${y}</option>`; return opts; }
+function yearList() { const now = new Date().getFullYear(); const arr = []; for (let y = now - 2; y <= now + 1; y++) arr.push(y); return arr; }
+
+function resultsTableHTML(rows, opts) {
+  opts = opts || {};
+  const showFeedback = !!opts.showFeedback;
+  let html = `<table><thead><tr><th>Student</th><th>Paper</th><th>Unit</th><th>Question</th><th>Mark</th><th>Status</th></tr></thead><tbody>`;
+  if (rows.length === 0) {
+    html += `<tr class="empty-row"><td colspan="6">No submissions yet.</td></tr>`;
+  } else {
+    rows.forEach(m => {
+      const isPending = m.status === 'pending';
+      html += `<tr>
+        <td>${esc(m.student)}</td>
+        <td>${esc(m.year)} ${esc(m.session)}</td>
+        <td>${esc(m.unit)}</td>
+        <td>${esc(m.question || 'Whole paper')}</td>
+        <td class="score-cell">${isPending ? '—' : m.score + '/' + m.max}</td>
+        <td><span class="pill ${isPending ? 'pill-amber' : 'pill-green'}">${isPending ? 'Pending' : 'Marked'}</span></td>
+      </tr>`;
+      if (showFeedback && !isPending && m.feedback) {
+        html += `<tr><td colspan="6" style="padding-top:0;"><div class="feedback-box">${esc(m.feedback)}</div></td></tr>`;
+      }
+    });
+  }
+  html += `</tbody></table>`;
+  return html;
+}
+
+/* =========================================================================
+   CHANGE PASSWORD MODAL
+   ========================================================================= */
+function openPwModal() {
+  document.getElementById('pwForm').reset();
+  document.getElementById('pwMsg').textContent = '';
+  document.getElementById('pwModalSub').textContent = `Update the password for ${session.username}.`;
+  document.getElementById('pwModalBg').style.display = 'flex';
+}
+document.getElementById('pwCancel').addEventListener('click', closePwModal);
+document.getElementById('pwModalBg').addEventListener('click', (e) => { if (e.target.id === 'pwModalBg') closePwModal(); });
+function closePwModal() { document.getElementById('pwModalBg').style.display = 'none'; }
+
+document.getElementById('pwForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const cur = document.getElementById('pwCurrent').value;
+  const next = document.getElementById('pwNew').value;
+  const confirmv = document.getElementById('pwConfirm').value;
+  const msg = document.getElementById('pwMsg');
+  if (next !== confirmv) { msg.textContent = "New passwords don't match."; return; }
+  const res = await authApi('change-password', { username: session.username, currentPassword: cur, newPassword: next });
+  if (!res.ok) { msg.textContent = res.error || 'Something went wrong.'; return; }
+  session.password = next;
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+  closePwModal();
+  render();
+});
+
+/* =========================================================================
+   "GIVE ACCESS" PANEL
+   ========================================================================= */
+function accessPanelHTML(idPrefix, roleLabel) {
+  return `
+    <div class="panel">
+      <h2>${roleLabel} Access</h2>
+      <p class="panel-sub">Give ${roleLabel.toLowerCase()}s permission to log in${roleLabel === 'Student' ? ' and submit answers' : ''}.</p>
+      <div class="grid2">
+        <div class="f"><label>${roleLabel} name</label><input type="text" id="${idPrefix}Name" placeholder="e.g. ${roleLabel === 'Student' ? 'Alvee Rahman' : 'Mr. Osei'}"></div>
+        <div class="f"><label>Temporary password</label><input type="text" id="${idPrefix}Pass" placeholder="At least 6 characters"></div>
+        <button type="button" class="btn" id="${idPrefix}GiveBtn">Give Access</button>
+      </div>
+      <div class="helper-text">Password must be at least 6 characters.</div>
+      <div class="msg" id="${idPrefix}Msg"></div>
+      <div id="${idPrefix}List"></div>
+    </div>
+  `;
+}
+function wireAccessPanel(idPrefix, roleKey, items) {
+  document.getElementById(idPrefix + 'GiveBtn').addEventListener('click', async () => {
+    const nameInput = document.getElementById(idPrefix + 'Name');
+    const passInput = document.getElementById(idPrefix + 'Pass');
+    const msg = document.getElementById(idPrefix + 'Msg');
+    const name = nameInput.value.trim();
+    const pass = passInput.value;
+    if (!name) { msg.className = 'msg err'; msg.textContent = 'Enter a name.'; return; }
+    const res = await authApiActed('give-access', { role: roleKey, name, password: pass });
+    if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
+    render();
+  });
+  renderAccessList(idPrefix, roleKey, items);
+}
+function renderAccessList(idPrefix, roleKey, items) {
+  const wrap = document.getElementById(idPrefix + 'List');
+  if (!items || items.length === 0) { wrap.innerHTML = `<p class="helper-text" style="margin-top:16px;">No ${roleKey}s have been given access yet.</p>`; return; }
+  wrap.innerHTML = items.map(name => `
+    <div class="list-item">
+      <div><div class="li-title">${esc(name)}</div><div class="li-sub">Has access</div></div>
+      <div class="li-right"><button class="remove-x" data-name="${esc(name)}" data-role="${roleKey}">Remove</button></div>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.remove-x').forEach(btn => btn.addEventListener('click', async () => {
+    await authApiActed('remove-user', { role: btn.dataset.role, name: btn.dataset.name });
+    render();
+  }));
+}
+
+/* =========================================================================
+   MARK SCHEMES PANEL (admin + teacher — schemes are shared globally, not per-teacher)
+   ========================================================================= */
+function schemesPanelHTML() {
+  return `
+    <div class="panel">
+      <h2>Marking schemes</h2>
+      <p class="panel-sub">Select the exact examination year, session and unit, then upload the marking scheme belonging to that paper.</p>
+      <div class="grid3">
+        <div class="f"><label>1. Year</label><select id="schemeYear"><option value="" disabled selected>Choose year</option>${yearOptions()}</select></div>
+        <div class="f"><label>2. Session</label><select id="schemeSession"><option value="" disabled selected>Choose session</option>${SESSIONS.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
+        <div class="f"><label>3. Unit</label><select id="schemeUnit"><option value="" disabled selected>Choose unit</option>${UNITS.map(u => `<option value="${u}">${u}</option>`).join('')}</select></div>
+      </div>
+      <div class="helper-text" style="margin-bottom:18px;">Select a year, session and unit to upload its marking scheme.</div>
+      <div class="dropzone" id="schemeDropzone">
+        <div class="arrow">&#8593;</div>
+        <div class="dz-title">Upload marking scheme for this paper</div>
+        <div class="dz-sub">PDF, PNG, JPG, WEBP or TXT — drop one file to use the year/session/unit above, or drop several at once and we'll match each one from its filename (e.g. "Unit 4 January 2023 Mark Scheme.pdf")</div>
+        <input type="file" id="schemeFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" multiple style="display:none;">
+      </div>
+      <div class="msg" id="schemeUploadMsg"></div>
+      <h2 style="margin-top:28px; font-size:15px;">Uploaded schemes</h2>
+      <div id="schemeListWrap" style="margin-top:12px;"></div>
+    </div>
+  `;
+}
+function wireSchemesPanel(schemes) {
+  const dz = document.getElementById('schemeDropzone');
+  const fileInput = document.getElementById('schemeFileInput');
+  dz.addEventListener('click', () => fileInput.click());
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files.length) handleSchemeFiles(e.dataTransfer.files); });
+  fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleSchemeFiles(e.target.files); e.target.value = ''; });
+  renderSchemeList(schemes);
+}
+function guessSchemeMeta(filename) {
+  const yearM = filename.match(/\b(20\d{2})\b/);
+  const year = yearM ? yearM[1] : null;
+  let sv = null;
+  if (/\bjan(uary)?\b/i.test(filename)) sv = 'January';
+  else if (/\bjun(e)?\b/i.test(filename) || /\bmay\b/i.test(filename)) sv = 'June';
+  else if (/\boct(ober)?\b/i.test(filename) || /\bnov(ember)?\b/i.test(filename)) sv = 'October';
+  let unit = null;
+  const unitM = filename.match(/unit\s*([1-6])\b/i);
+  if (unitM) unit = 'Unit ' + unitM[1];
+  else { const wbiM = filename.match(/wbi1([1-6])/i); if (wbiM) unit = 'Unit ' + wbiM[1]; }
+  return { year, session: sv, unit };
+}
+function readAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+async function fileToSchemeRecord(file) {
+  if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
+    return { name: file.name, kind: 'text', content: await file.text() };
+  } else if (file.type === 'application/pdf') {
+    const dataUrl = await readAsDataURL(file);
+    return { name: file.name, kind: 'pdf', mediaType: 'application/pdf', base64: dataUrl.split(',')[1] };
+  } else if (file.type.startsWith('image/')) {
+    const dataUrl = await readAsDataURL(file);
+    return { name: file.name, kind: 'image', mediaType: file.type, base64: dataUrl.split(',')[1] };
+  }
+  throw new Error('Unsupported file type. Use PDF, PNG, JPG, WEBP or TXT.');
+}
+async function openSchemeFile(scheme, btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Opening…';
+  const res = await schemesApi('get', { year: scheme.year, session: scheme.session, unit: scheme.unit });
+  btn.disabled = false;
+  btn.textContent = originalText;
+  if (!res.ok || !res.scheme) { alert(res.error || 'Could not open this file.'); return; }
+  const file = res.scheme.file;
+  if (file.kind === 'text') {
+    window.open(URL.createObjectURL(new Blob([file.content], { type: 'text/plain' })), '_blank');
+  } else {
+    const dataUrl = 'data:' + file.mediaType + ';base64,' + file.base64;
+    window.open(dataUrl, '_blank');
+  }
+}
+async function handleSchemeFiles(fileList) {
+  const files = Array.from(fileList);
+  const msg = document.getElementById('schemeUploadMsg');
+  if (files.length === 1) {
+    const year = document.getElementById('schemeYear').value;
+    const sv = document.getElementById('schemeSession').value;
+    const unit = document.getElementById('schemeUnit').value;
+    if (!year || !sv || !unit) { msg.className = 'msg err'; msg.textContent = 'Choose a year, session and unit first.'; return; }
+    msg.className = 'msg'; msg.textContent = 'Uploading…';
+    try {
+      const file = await fileToSchemeRecord(files[0]);
+      const res = await schemesApi('upsert', { year, session: sv, unit, file });
+      if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
+      msg.className = 'msg ok'; msg.textContent = `Saved marking scheme for ${year} • ${sv} • ${unit}.`;
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; return; }
+    render();
+    return;
+  }
+  msg.className = 'msg'; msg.textContent = `Matching ${files.length} files…`;
+  let uploaded = 0;
+  const unmatched = [];
+  for (const f of files) {
+    const meta = guessSchemeMeta(f.name);
+    if (!meta.year || !meta.session || !meta.unit) { unmatched.push(f.name); continue; }
+    try {
+      const file = await fileToSchemeRecord(f);
+      const res = await schemesApi('upsert', { year: meta.year, session: meta.session, unit: meta.unit, file });
+      if (res.ok) uploaded++; else unmatched.push(f.name + ' (' + res.error + ')');
+    } catch (err) { unmatched.push(f.name + ' (' + err.message + ')'); }
+  }
+  msg.className = unmatched.length ? 'msg err' : 'msg ok';
+  msg.textContent = `Uploaded ${uploaded} scheme(s).` + (unmatched.length ? ` Couldn't match ${unmatched.length}: ${unmatched.join(', ')} — rename with the unit, session and year, or upload individually using the fields above.` : '');
+  render();
+}
+function renderSchemeList(schemes) {
+  const wrap = document.getElementById('schemeListWrap');
+  const items = (schemes || []).slice().sort((a, b) => (b.year - a.year) || a.unit.localeCompare(b.unit));
+  if (items.length === 0) { wrap.innerHTML = `<p class="helper-text">No marking schemes uploaded yet.</p>`; return; }
+  wrap.innerHTML = items.map((s, i) => `
+    <div class="list-item" style="flex-direction:column; align-items:stretch;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
+        <div><div class="li-title">${esc(s.year)} • ${esc(s.session)} • ${esc(s.unit)}</div><div class="li-sub">${esc(s.file.name)} • uploaded by ${esc(s.createdBy)}</div></div>
+        <div class="li-right"><span class="pill pill-green">Available</span><button class="btn-outline" data-open="${i}" style="padding:6px 12px; font-size:12.5px;">Open</button><button class="btn-outline" data-notes="${i}" style="padding:6px 12px; font-size:12.5px;">${s.guidance ? 'Edit notes' : 'Add notes'}</button><button class="remove-x" data-remove="${i}">Remove</button></div>
+      </div>
+      ${s.guidance ? `<div class="feedback-box" style="margin-top:10px;">${esc(s.guidance)}</div>` : ''}
+      <div id="notesEditor${i}"></div>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => openSchemeFile(items[parseInt(btn.dataset.open, 10)], btn)));
+  wrap.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', async () => {
+    const s = items[parseInt(btn.dataset.remove, 10)];
+    await schemesApi('remove', { year: s.year, session: s.session, unit: s.unit });
+    render();
+  }));
+  wrap.querySelectorAll('[data-notes]').forEach(btn => btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.notes, 10);
+    const s = items[idx];
+    const holder = document.getElementById('notesEditor' + idx);
+    if (holder.dataset.open === '1') { holder.innerHTML = ''; holder.dataset.open = '0'; return; }
+    holder.dataset.open = '1';
+    holder.innerHTML = `
+      <div class="f" style="margin-top:12px;"><label>Marking guidance for this paper (optional)</label>
+      <textarea id="notesText${idx}" rows="3" placeholder="e.g. Accept either term for photosynthesis stages. Full marks require units shown.">${esc(s.guidance || '')}</textarea></div>
+      <button type="button" class="btn" id="saveNotes${idx}" style="margin-top:8px;">Save notes</button>
+    `;
+    document.getElementById('saveNotes' + idx).addEventListener('click', async () => {
+      await schemesApi('update-guidance', { year: s.year, session: s.session, unit: s.unit, guidance: document.getElementById('notesText' + idx).value.trim() });
+      render();
+    });
+  }));
+}
+
+/* =========================================================================
+   ADMIN DASHBOARD
+   ========================================================================= */
+async function renderAdmin(main) {
+  const [usersRes, schemesRes, marksRes, apiStatusRes] = await Promise.all([
+    authApiActed('list-users'), schemesApi('list'), marksApi('list'), settingsApi('status')
+  ]);
+  const teachers = usersRes.ok ? usersRes.teachers : [];
+  const students = usersRes.ok ? usersRes.students : [];
+  const schemes = schemesRes.ok ? schemesRes.schemes : [];
+  const marks = marksRes.ok ? marksRes.marks : [];
+  const marked = marks.filter(m => m.status !== 'pending');
+  const avg = marked.length ? Math.round(marked.reduce((s, m) => s + (m.score / m.max) * 100, 0) / marked.length) : null;
+  const isSet = apiStatusRes.ok && apiStatusRes.isSet;
+
+  main.innerHTML = `
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-sub">Manage marking schemes, teacher and student access, and review results.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">${students.length}</div><div class="lbl">Students</div></div>
+      <div class="stat"><div class="num">${teachers.length}</div><div class="lbl">Teachers</div></div>
+      <div class="stat"><div class="num">${avg === null ? '—' : avg + '%'}</div><div class="lbl">Average mark</div></div>
+    </div>
+    ${schemesPanelHTML()}
+    ${accessPanelHTML('teacher', 'Teacher')}
+    ${accessPanelHTML('student', 'Student')}
+    <div class="panel"><h2>Student results</h2><p class="panel-sub">Results across every teacher, most recent first.</p>${resultsTableHTML(marks.slice().sort((a, b) => new Date(b.date) - new Date(a.date)))}</div>
+    <div class="panel">
+      <h2>AI marking (Claude) settings</h2>
+      <p class="panel-sub">This key lives only on the server and is never sent to any browser — teachers' devices never see it.</p>
+      <div class="grid2">
+        <div class="f" style="grid-column:1 / span 2;"><label>Anthropic API key ${isSet ? '<span style="color:var(--green-text); font-weight:400;">(set)</span>' : ''}</label><input type="password" id="apiKeyInput" placeholder="${isSet ? '••••••••••••••••••••' : 'sk-ant-...'}"></div>
+        <button type="button" class="btn" id="saveApiKeyBtn">Save key</button>
+      </div>
+      <div class="msg" id="apiKeyMsg"></div>
+    </div>
+  `;
+  wireSchemesPanel(schemes);
+  wireAccessPanel('teacher', 'teacher', teachers);
+  wireAccessPanel('student', 'student', students);
+  document.getElementById('saveApiKeyBtn').addEventListener('click', async () => {
+    const input = document.getElementById('apiKeyInput');
+    const msg = document.getElementById('apiKeyMsg');
+    const val = input.value.trim();
+    if (!val) return;
+    const res = await settingsApi('set', { apiKey: val });
+    if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
+    msg.className = 'msg ok'; msg.textContent = 'API key saved.';
+    render();
+  });
+}
+
+/* =========================================================================
+   TEACHER DASHBOARD
+   ========================================================================= */
+async function renderTeacher(main) {
+  const [schemesRes, marksRes, usersRes] = await Promise.all([schemesApi('list'), marksApi('list'), authApiActed('list-users')]);
+  const schemes = schemesRes.ok ? schemesRes.schemes : [];
+  const marks = marksRes.ok ? marksRes.marks : [];
+  const students = usersRes.ok ? usersRes.students : [];
+  const mine = marks.filter(m => m.gradedBy === session.username && m.status !== 'pending').sort((a, b) => new Date(b.date) - new Date(a.date));
+  const pending = marks.filter(m => m.status === 'pending' && schemes.some(s => String(s.year) === String(m.year) && s.session === m.session && s.unit === m.unit));
+  const avg = mine.length ? Math.round(mine.reduce((s, m) => s + (m.score / m.max) * 100, 0) / mine.length) : null;
+
+  main.innerHTML = `
+    <h1 class="page-title">Teacher Dashboard</h1>
+    <p class="page-sub">Manage marking schemes and review student submissions.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">${students.length}</div><div class="lbl">Students</div></div>
+      <div class="stat"><div class="num">${mine.length + pending.length}</div><div class="lbl">Submissions</div></div>
+      <div class="stat"><div class="num">${avg === null ? '—' : avg + '%'}</div><div class="lbl">Average mark</div></div>
+    </div>
+    ${schemesPanelHTML()}
+    <div class="panel">
+      <h2>Submissions to mark</h2>
+      <p class="panel-sub">Student uploads waiting to be marked. Claude suggests a score and feedback for you to review before saving.</p>
+      <div id="pendingList"></div>
+      <div id="aiResultPanel"></div>
+    </div>
+    ${accessPanelHTML('student', 'Student')}
+    <div class="panel"><h2>Student results</h2><p class="panel-sub">Papers you've marked, most recent first.</p>${resultsTableHTML(mine, { showFeedback: true })}</div>
+  `;
+  wireSchemesPanel(schemes);
+  wireAccessPanel('student', 'student', students);
+  renderPendingList(pending);
+}
+
+function renderPendingList(pending) {
+  const wrap = document.getElementById('pendingList');
+  if (pending.length === 0) { wrap.innerHTML = `<p class="helper-text">No submissions waiting right now.</p>`; return; }
+  wrap.innerHTML = pending.map(m => `
+    <div class="list-item">
+      <div>
+        <div class="li-title">${esc(m.student)} — ${esc(m.year)} ${esc(m.session)} • ${esc(m.unit)}</div>
+        <div class="li-sub">${esc(m.question || 'Whole paper')} • ${m.pageCount} page(s) • submitted ${esc(m.date)}</div>
+      </div>
+      <div class="li-right"><button class="btn" data-id="${esc(m.id)}">Mark with Claude</button></div>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', () => onRunAIMark(btn.dataset.id, btn)));
+}
+
+async function onRunAIMark(id, btn) {
+  const panel = document.getElementById('aiResultPanel');
+  btn.disabled = true; btn.textContent = 'Marking…';
+  panel.innerHTML = `<p class="helper-text">Claude is reading the submission…</p>`;
+  const res = await markWithAI(id);
+  btn.disabled = false; btn.textContent = 'Mark with Claude';
+  if (!res.ok) { panel.innerHTML = `<p class="msg err">${esc(res.error || 'Something went wrong while marking.')}</p>`; return; }
+  renderAIResult(id, res);
+}
+
+function renderAIResult(id, result) {
+  const panel = document.getElementById('aiResultPanel');
+  panel.innerHTML = `
+    <div class="panel" style="margin-top:8px; background:#FBFAFF;">
+      <h2>Claude's suggested mark</h2>
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="f"><label>Score</label><input type="number" id="aiScoreInput" min="0" value="${result.score}"></div>
+        <div class="f"><label>Out of</label><input type="number" id="aiMaxInput" min="1" value="${result.max}"></div>
+      </div>
+      <div class="f" style="margin-bottom:16px;"><label>Feedback for the student</label><textarea id="aiFeedbackInput" rows="4">${esc(result.feedback)}</textarea></div>
+      <button type="button" class="btn" id="saveAiMarkBtn">Save mark</button>
+      <button type="button" class="btn-ghost" id="discardAiMarkBtn">Discard</button>
+      <div class="msg" id="saveAiMsg"></div>
+    </div>
+  `;
+  document.getElementById('saveAiMarkBtn').addEventListener('click', () => onSaveAIMark(id));
+  document.getElementById('discardAiMarkBtn').addEventListener('click', () => { panel.innerHTML = ''; });
+}
+
+async function onSaveAIMark(id) {
+  const score = parseFloat(document.getElementById('aiScoreInput').value);
+  const max = parseFloat(document.getElementById('aiMaxInput').value);
+  const feedback = document.getElementById('aiFeedbackInput').value.trim();
+  const msg = document.getElementById('saveAiMsg');
+  if (isNaN(score) || isNaN(max) || max <= 0 || score < 0 || score > max) { msg.className = 'msg err'; msg.textContent = `Score must be between 0 and ${max || '?'}.`; return; }
+  const res = await marksApi('save', { id, score, max, feedback });
+  if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
+  render();
+}
+
+/* =========================================================================
+   STUDENT DASHBOARD
+   ========================================================================= */
+let studentView = 'select'; // 'select' | 'upload'
+let studentSelection = { year: null, session: null, unit: null };
+let studentPages = [];
+
+async function renderStudent(main) {
+  if (studentView === 'upload') return renderStudentUpload(main);
+  return renderStudentSelect(main);
+}
+
+async function renderStudentSelect(main) {
+  const marksRes = await marksApi('list');
+  const marks = (marksRes.ok ? marksRes.marks : []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  main.innerHTML = `
+    <h1 class="page-title">Student Dashboard</h1>
+    <p class="page-sub">Choose your examination paper before uploading your answers.</p>
+
+    <div class="panel" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
+      <div><h2>Student account</h2><p class="panel-sub" style="margin-bottom:0;">Change your password whenever you need to.</p></div>
+      <button class="btn-outline" id="studentChangePwBtn">Change my password</button>
+    </div>
+
+    <div class="step-label">1. Select year</div>
+    <div class="select-cards" id="yearCards">
+      ${yearList().map(y => `<div class="select-card${studentSelection.year === y ? ' selected' : ''}" data-year="${y}"><div class="sc-title">${y}</div><div class="sc-sub">${QUALIFICATION_LABEL}</div></div>`).join('')}
+    </div>
+
+    ${studentSelection.year ? `
+    <div class="step-label">2. Select session</div>
+    <div class="f" style="max-width:340px; margin-bottom:28px;">
+      <select id="sessionSelect">
+        <option value="" disabled ${!studentSelection.session ? 'selected' : ''}>Choose session</option>
+        ${SESSIONS.map(s => `<option value="${s}" ${studentSelection.session === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </div>` : ''}
+
+    ${studentSelection.year && studentSelection.session ? `
+    <div class="step-label">3. Select unit</div>
+    <div class="select-cards" id="unitCards">
+      ${UNITS.map(u => `<div class="select-card${studentSelection.unit === u ? ' selected' : ''}" data-unit="${u}"><div class="sc-title">${u}</div><div class="sc-sub">${SUBJECT_LABEL}</div></div>`).join('')}
+    </div>` : ''}
+
+    ${studentSelection.year && studentSelection.session && studentSelection.unit ? `
+    <button class="btn" id="continueUploadBtn">Continue to upload answers →</button>
+    ` : ''}
+
+    <div class="panel" style="margin-top:32px;">
+      <h2>My results</h2>
+      <p class="panel-sub">Every paper you've submitted, most recent first.</p>
+      ${resultsTableHTML(marks.map(m => ({ student: session.username, ...m })), { showFeedback: true })}
+    </div>
+  `;
+
+  document.getElementById('studentChangePwBtn').addEventListener('click', openPwModal);
+  document.querySelectorAll('#yearCards .select-card').forEach(card => card.addEventListener('click', () => {
+    studentSelection = { year: parseInt(card.dataset.year, 10), session: null, unit: null };
+    render();
+  }));
+  const sessionSelect = document.getElementById('sessionSelect');
+  if (sessionSelect) sessionSelect.addEventListener('change', (e) => { studentSelection.session = e.target.value; studentSelection.unit = null; render(); });
+  document.querySelectorAll('#unitCards .select-card').forEach(card => card.addEventListener('click', () => {
+    studentSelection.unit = card.dataset.unit;
+    render();
+  }));
+  const continueBtn = document.getElementById('continueUploadBtn');
+  if (continueBtn) continueBtn.addEventListener('click', () => { studentPages = []; studentView = 'upload'; render(); });
+}
+
+async function renderStudentUpload(main) {
+  const s = studentSelection;
+  main.innerHTML = `
+    <button class="btn-outline" id="backToSelectBtn" style="margin-bottom:20px;">← Back to paper selection</button>
+    <h1 class="page-title">Upload your answer</h1>
+    <p class="page-sub">Upload the complete answer for the selected examination paper.</p>
+
+    <div class="warning-banner">
+      <div class="wb-icon">&#9888;</div>
+      <div>
+        <div class="wb-title">Important before uploading</div>
+        <div class="wb-body">Upload <b>all pages of your past-paper answer</b>, including every page containing your responses. Make sure the <b>question numbers are clearly visible</b> in the pictures or PDF so the marker can identify which question each answer belongs to.</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="dropzone" id="answerDropzone">
+          <div class="arrow">&#8593;</div>
+          <div class="dz-title">Add answer pages</div>
+          <div class="dz-sub">Upload JPG, PNG, WEBP images or a PDF. You can add more pages at any time.</div>
+          <input type="file" id="answerFileInput" accept="image/*,.pdf" multiple style="display:none;">
+        </div>
+        <div id="pagesArea" style="margin-top:16px;"></div>
+
+        <div class="f" style="margin:18px 0 0;">
+          <label>Question</label>
+          <input type="text" id="submitQuestion" placeholder="Example: 6(b)">
+        </div>
+        <button class="btn btn-block" id="submitForMarkingBtn" style="margin-top:16px;" ${studentPages.length === 0 ? 'disabled' : ''}>Submit for marking</button>
+        <div class="msg" id="submitMsg"></div>
+      </div>
+
+      <div class="side-panel">
+        <h3>Submission</h3>
+        <div class="sp-note">Make sure all pages of the answer are uploaded in the correct order.</div>
+        <div class="sp-row"><div class="sp-label">Student</div><div class="sp-value">${esc(session.username)}</div></div>
+        <div class="sp-row"><div class="sp-label">Paper</div><div class="sp-value">${esc(s.year)} • ${esc(s.session)}</div></div>
+        <div class="sp-row"><div class="sp-label">Unit</div><div class="sp-value">${esc(s.unit)}</div></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('backToSelectBtn').addEventListener('click', () => { studentView = 'select'; render(); });
+
+  const dz = document.getElementById('answerDropzone');
+  const fileInput = document.getElementById('answerFileInput');
+  dz.addEventListener('click', () => fileInput.click());
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleAnswerFiles(e.dataTransfer.files); });
+  fileInput.addEventListener('change', (e) => { handleAnswerFiles(e.target.files); e.target.value = ''; });
+
+  document.getElementById('submitForMarkingBtn').addEventListener('click', onSubmitForMarking);
+  renderPagesArea();
+}
+
+function compressImageFile(file, maxDim, quality) {
+  maxDim = maxDim || 1500;
+  quality = quality || 0.72;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({ name: file.name, mediaType: 'image/jpeg', base64: dataUrl.split(',')[1], dataUrl });
+      };
+      img.onerror = () => reject(new Error('Could not load image ' + file.name));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('Could not read ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+function fileToParts(file) {
+  if (file.type && file.type.startsWith('image/')) return compressImageFile(file);
+  // Non-image files (PDFs) can't be resized via canvas — send as-is.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      resolve({ name: file.name, mediaType: file.type || 'application/pdf', base64: dataUrl.split(',')[1], dataUrl });
+    };
+    reader.onerror = () => reject(new Error('Could not read ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+async function handleAnswerFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const msg = document.getElementById('submitMsg');
+  if (msg) { msg.className = 'msg'; msg.textContent = files.length > 1 ? 'Processing pages…' : ''; }
+  for (const file of files) {
+    try { studentPages.push(await fileToParts(file)); } catch (err) {
+      if (msg) { msg.className = 'msg err'; msg.textContent = err.message; }
+    }
+  }
+  if (msg && msg.textContent === 'Processing pages…') msg.textContent = '';
+  renderPagesArea();
+  const btn = document.getElementById('submitForMarkingBtn');
+  if (btn) btn.disabled = studentPages.length === 0;
+}
+function renderPagesArea() {
+  const wrap = document.getElementById('pagesArea');
+  if (!wrap) return;
+  if (studentPages.length === 0) {
+    wrap.innerHTML = `
+      <div class="dropzone small" id="firstPageDropzone">
+        <div style="font-size:20px; margin-bottom:6px;">+</div>
+        <div class="dz-title">Add your first page</div>
+        <div class="dz-sub">You can add more later.</div>
+      </div>
+      <div class="helper-text">No pages added yet.</div>
+    `;
+    document.getElementById('firstPageDropzone').addEventListener('click', () => document.getElementById('answerFileInput').click());
+  } else {
+    wrap.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:10px;">
+      ${studentPages.map((p, i) => `
+        <div class="thumb">
+          <img src="${p.dataUrl.startsWith('data:image') ? p.dataUrl : ''}" alt="Page ${i + 1}" onerror="this.style.display='none'">
+          <div class="thumb-page">Page ${i + 1}</div>
+          <button type="button" class="thumb-remove" data-idx="${i}">&times;</button>
+        </div>
+      `).join('')}
+      <div class="add-tile" id="addMorePagesTile">+</div>
+    </div>`;
+    document.getElementById('addMorePagesTile').addEventListener('click', () => document.getElementById('answerFileInput').click());
+    wrap.querySelectorAll('.thumb-remove').forEach(btn => btn.addEventListener('click', () => {
+      studentPages.splice(parseInt(btn.dataset.idx, 10), 1);
+      renderPagesArea();
+      const submitBtn = document.getElementById('submitForMarkingBtn');
+      if (submitBtn) submitBtn.disabled = studentPages.length === 0;
+    }));
+  }
+}
+
+async function onSubmitForMarking() {
+  const msg = document.getElementById('submitMsg');
+  if (studentPages.length === 0) { msg.className = 'msg err'; msg.textContent = 'Add at least one page first.'; return; }
+  const question = document.getElementById('submitQuestion').value.trim() || 'Whole paper';
+  const s = studentSelection;
+  const pages = studentPages.map(p => ({ name: p.name, mediaType: p.mediaType, base64: p.base64 }));
+  const approxBytes = pages.reduce((sum, p) => sum + p.base64.length * 0.75, 0);
+  if (approxBytes > 9 * 1024 * 1024) {
+    msg.className = 'msg err';
+    msg.textContent = `This submission is large (${Math.round(approxBytes / 1024 / 1024)}MB) and may be rejected by the server. If it fails, try submitting in two smaller batches instead of ${pages.length} pages at once.`;
+  }
+  const btn = document.getElementById('submitForMarkingBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  // Step 1: save the submission. This is fast and must always succeed —
+  // marking happens as a separate follow-up call so a slow Claude response
+  // can never risk losing the submission itself.
+  const res = await marksApi('submit', { year: s.year, session: s.session, unit: s.unit, question, pages });
+  btn.disabled = false;
+  btn.textContent = 'Submit for marking';
+  if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
+
+  studentPages = [];
+  studentSelection = { year: null, session: null, unit: null };
+  studentView = 'select';
+  await render(); // shows the new submission as Pending right away
+
+  // Step 2: trigger marking in the background and finalize it once done.
+  // If this fails for any reason, the submission simply stays Pending —
+  // a teacher can still mark it manually from "Submissions to mark".
+  markThenSave(res.id);
+}
+
+async function markThenSave(id) {
+  const aiRes = await markWithAI(id);
+  if (!aiRes.ok) return; // stays Pending; nothing else to do here
+  await marksApi('save', { id, score: aiRes.score, max: aiRes.max, feedback: aiRes.feedback });
+  // Refresh the view if the student is still looking at their results.
+  if (session && session.role === 'student' && studentView === 'select') render();
+}
+
+// Restore a saved session on page load, so a reload doesn't drop back to login.
+// Placed at the end of the script so everything it depends on is already defined.
+(function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (raw) { session = JSON.parse(raw); enterApp(); }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
