@@ -24,6 +24,26 @@ async function findActor(username, password) {
 function schemeKey(year, sessionVal, unit) {
   return 'scheme_' + year + '_' + keySafe(sessionVal) + '_' + keySafe(unit);
 }
+function attemptRepairTruncatedJSON(str) {
+  // If the response got cut off mid-way through the "questions" array, trim
+  // back to the last fully-completed question object, close the array and
+  // outer object, and try parsing that instead of losing everything.
+  try {
+    if (!str.trim().startsWith('{')) return null;
+    let idx = str.lastIndexOf('},');
+    while (idx !== -1) {
+      const candidate = str.slice(0, idx + 1) + ']}';
+      try {
+        const obj = JSON.parse(candidate);
+        if (obj && typeof obj.score !== 'undefined') return obj;
+      } catch (e) { /* try an earlier cut point */ }
+      idx = str.lastIndexOf('},', idx - 1);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -79,7 +99,7 @@ async function handleRequest(req, res) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 4000,
+      max_tokens: 12000,
       thinking: { type: 'disabled' },
       system: system,
       messages: [{ role: 'user', content: content }]
@@ -102,17 +122,25 @@ async function handleRequest(req, res) {
     clean = clean.slice(firstBrace, lastBrace + 1);
   }
   let parsed;
+  let wasRepaired = false;
   try {
     parsed = JSON.parse(clean);
   } catch (e) {
-    return res.status(200).json({
-      ok: false,
-      error: "Couldn't parse Claude's response.",
-      rawResponsePreview: text || '(no text content in the response)',
-      rawContentStructure: JSON.stringify((data.content || []).map(b => ({ type: b.type, textLength: b.text ? b.text.length : null }))),
-      stopReason: data.stop_reason || null,
-      usage: data.usage || null
-    });
+    // If the response got cut off mid-way through the questions array, try to
+    // salvage everything up to the last fully-completed question rather than
+    // losing an otherwise-good grading pass entirely.
+    parsed = attemptRepairTruncatedJSON(clean);
+    if (!parsed) {
+      return res.status(200).json({
+        ok: false,
+        error: "Couldn't parse Claude's response.",
+        rawResponsePreview: text || '(no text content in the response)',
+        rawContentStructure: JSON.stringify((data.content || []).map(b => ({ type: b.type, textLength: b.text ? b.text.length : null }))),
+        stopReason: data.stop_reason || null,
+        usage: data.usage || null
+      });
+    }
+    wasRepaired = true;
   }
   const score = Number(parsed.score);
   const max = Number(parsed.max) || 100;
@@ -124,7 +152,7 @@ async function handleRequest(req, res) {
     pointsAwarded: Array.isArray(q.pointsAwarded) ? q.pointsAwarded.map(String) : [],
     pointsMissed: Array.isArray(q.pointsMissed) ? q.pointsMissed.map(String) : []
   })) : [];
-  return res.status(200).json({ ok: true, score, max, feedback: String(parsed.feedback || ''), questions });
+  return res.status(200).json({ ok: true, score, max, feedback: String(parsed.feedback || ''), questions, wasRepaired });
 }
 
 export const config = {
