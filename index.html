@@ -157,6 +157,7 @@
 
   @media (max-width:640px){ .topbar{padding:12px 16px;} .main{padding:24px 16px 50px;} }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -305,15 +306,126 @@ function esc(str) { const d = document.createElement('div'); d.textContent = str
 function yearOptions() { const now = new Date().getFullYear(); let opts = ''; for (let y = now + 1; y >= now - 5; y--) opts += `<option value="${y}">${y}</option>`; return opts; }
 function yearList() { const now = new Date().getFullYear(); const arr = []; for (let y = now - 2; y <= now + 1; y++) arr.push(y); return arr; }
 
+let reportRowsCache = {};
+
+function downloadReportPDF(id) {
+  const m = reportRowsCache[id];
+  if (!m) { alert('Report data not available for this row.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 48;
+  let y = 56;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Marking Report', margin, y);
+  y += 26;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(90);
+  const meta = [
+    `Student: ${m.student}`,
+    `Paper: ${m.year} ${m.session} \u2022 ${m.unit}`,
+    `Question(s): ${m.question || 'Whole paper'}`,
+    `Marked by: ${m.gradedBy || 'Claude'}${m.markedDate ? ' on ' + m.markedDate : ''}`
+  ];
+  meta.forEach(line => { doc.text(line, margin, y); y += 16; });
+  y += 8;
+
+  doc.setDrawColor(220);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 26;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(20);
+  doc.text(`Total: ${m.score} / ${m.max}`, margin, y);
+  y += 24;
+
+  if (m.feedback) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Overall feedback', margin, y);
+    y += 16;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(60);
+    const feedbackLines = doc.splitTextToSize(m.feedback, pageWidth - margin * 2);
+    doc.text(feedbackLines, margin, y);
+    y += feedbackLines.length * 13 + 20;
+  }
+
+  const questions = Array.isArray(m.questions) ? m.questions : [];
+  questions.forEach(q => {
+    if (y > 740) { doc.addPage(); y = 56; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(20);
+    doc.text(`Question ${q.question}`, margin, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(109, 40, 217);
+    doc.text(`${q.marksAwarded}/${q.marksAvailable}`, pageWidth - margin, y, { align: 'right' });
+    y += 18;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(21, 128, 61);
+    doc.text('Marking points awarded:', margin + 10, y);
+    y += 13;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60);
+    if (q.pointsAwarded && q.pointsAwarded.length) {
+      q.pointsAwarded.forEach(pt => {
+        const lines = doc.splitTextToSize('\u2022 ' + pt, pageWidth - margin * 2 - 20);
+        if (y > 760) { doc.addPage(); y = 56; }
+        doc.text(lines, margin + 16, y);
+        y += lines.length * 12;
+      });
+    } else {
+      doc.text('None', margin + 16, y);
+      y += 12;
+    }
+    y += 6;
+
+    if (y > 750) { doc.addPage(); y = 56; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(185, 28, 28);
+    doc.text('Marking points missed:', margin + 10, y);
+    y += 13;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60);
+    if (q.pointsMissed && q.pointsMissed.length) {
+      q.pointsMissed.forEach(pt => {
+        const lines = doc.splitTextToSize('\u2022 ' + pt, pageWidth - margin * 2 - 20);
+        if (y > 760) { doc.addPage(); y = 56; }
+        doc.text(lines, margin + 16, y);
+        y += lines.length * 12;
+      });
+    } else {
+      doc.text('None \u2014 full marks', margin + 16, y);
+      y += 12;
+    }
+    y += 20;
+  });
+
+  const filename = `${m.student}-${m.year}-${m.session}-${m.unit}-report.pdf`.replace(/[^a-zA-Z0-9.\-]+/g, '_');
+  doc.save(filename);
+}
+
 function resultsTableHTML(rows, opts) {
   opts = opts || {};
   const showFeedback = !!opts.showFeedback;
-  let html = `<table><thead><tr><th>Student</th><th>Paper</th><th>Unit</th><th>Question</th><th>Mark</th><th>Status</th></tr></thead><tbody>`;
+  let html = `<table><thead><tr><th>Student</th><th>Paper</th><th>Unit</th><th>Question</th><th>Mark</th><th>Status</th><th></th></tr></thead><tbody>`;
   if (rows.length === 0) {
-    html += `<tr class="empty-row"><td colspan="6">No submissions yet.</td></tr>`;
+    html += `<tr class="empty-row"><td colspan="7">No submissions yet.</td></tr>`;
   } else {
     rows.forEach(m => {
       const isPending = m.status === 'pending';
+      if (m.id) reportRowsCache[m.id] = m;
+      const hasBreakdown = !isPending && Array.isArray(m.questions) && m.questions.length > 0;
       html += `<tr>
         <td>${esc(m.student)}</td>
         <td>${esc(m.year)} ${esc(m.session)}</td>
@@ -321,9 +433,10 @@ function resultsTableHTML(rows, opts) {
         <td>${esc(m.question || 'Whole paper')}</td>
         <td class="score-cell">${isPending ? '—' : m.score + '/' + m.max}</td>
         <td><span class="pill ${isPending ? 'pill-amber' : 'pill-green'}">${isPending ? 'Pending' : 'Marked'}</span></td>
+        <td>${hasBreakdown ? `<button class="btn-outline" style="padding:4px 10px; font-size:11.5px;" onclick="downloadReportPDF('${esc(m.id)}')">PDF report</button>` : ''}</td>
       </tr>`;
       if (showFeedback && !isPending && m.feedback) {
-        html += `<tr><td colspan="6" style="padding-top:0;"><div class="feedback-box">${esc(m.feedback)}</div></td></tr>`;
+        html += `<tr><td colspan="7" style="padding-top:0;"><div class="feedback-box">${esc(m.feedback)}</div></td></tr>`;
       }
     });
   }
@@ -686,6 +799,27 @@ async function onRunAIMark(id, btn) {
 
 function renderAIResult(id, result) {
   const panel = document.getElementById('aiResultPanel');
+  const questions = result.questions || [];
+  const breakdownHTML = questions.length ? `
+    <div class="f" style="margin-bottom:16px;">
+      <label>Question-by-question breakdown (from Claude)</label>
+      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:6px;">
+        <table style="font-size:12.5px;">
+          <thead><tr><th>Q</th><th>Mark</th><th>Points awarded</th><th>Points missed</th></tr></thead>
+          <tbody>
+            ${questions.map(q => `
+              <tr>
+                <td style="font-weight:700; white-space:nowrap;">${esc(q.question)}</td>
+                <td style="white-space:nowrap;" class="score-cell">${q.marksAwarded}/${q.marksAvailable}</td>
+                <td>${q.pointsAwarded.length ? esc(q.pointsAwarded.join('; ')) : '<span style="color:var(--text-soft);">—</span>'}</td>
+                <td>${q.pointsMissed.length ? esc(q.pointsMissed.join('; ')) : '<span style="color:var(--text-soft);">—</span>'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
   panel.innerHTML = `
     <div class="panel" style="margin-top:8px; background:#FBFAFF;">
       <h2>Claude's suggested mark</h2>
@@ -694,22 +828,23 @@ function renderAIResult(id, result) {
         <div class="f"><label>Out of</label><input type="number" id="aiMaxInput" min="1" value="${result.max}"></div>
       </div>
       <div class="f" style="margin-bottom:16px;"><label>Feedback for the student</label><textarea id="aiFeedbackInput" rows="4">${esc(result.feedback)}</textarea></div>
+      ${breakdownHTML}
       <button type="button" class="btn" id="saveAiMarkBtn">Save mark</button>
       <button type="button" class="btn-ghost" id="discardAiMarkBtn">Discard</button>
       <div class="msg" id="saveAiMsg"></div>
     </div>
   `;
-  document.getElementById('saveAiMarkBtn').addEventListener('click', () => onSaveAIMark(id));
+  document.getElementById('saveAiMarkBtn').addEventListener('click', () => onSaveAIMark(id, questions));
   document.getElementById('discardAiMarkBtn').addEventListener('click', () => { panel.innerHTML = ''; });
 }
 
-async function onSaveAIMark(id) {
+async function onSaveAIMark(id, questions) {
   const score = parseFloat(document.getElementById('aiScoreInput').value);
   const max = parseFloat(document.getElementById('aiMaxInput').value);
   const feedback = document.getElementById('aiFeedbackInput').value.trim();
   const msg = document.getElementById('saveAiMsg');
   if (isNaN(score) || isNaN(max) || max <= 0 || score < 0 || score > max) { msg.className = 'msg err'; msg.textContent = `Score must be between 0 and ${max || '?'}.`; return; }
-  const res = await marksApi('save', { id, score, max, feedback });
+  const res = await marksApi('save', { id, score, max, feedback, questions: questions || [] });
   if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
   render();
 }
