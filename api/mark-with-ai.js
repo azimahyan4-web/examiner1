@@ -77,7 +77,7 @@ async function handleRequest(req, res) {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1000, system: system, messages: [{ role: 'user', content: content }] })
+    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 4000, system: system, messages: [{ role: 'user', content: content }] })
   });
 
   if (!anthropicRes.ok) {
@@ -87,9 +87,25 @@ async function handleRequest(req, res) {
   }
   const data = await anthropicRes.json();
   const text = (data.content || []).map(b => b.text || '').join('').trim();
-  const clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  // If Claude added any stray text around the JSON object, extract just the
+  // {...} portion rather than requiring the whole reply to be valid JSON.
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    clean = clean.slice(firstBrace, lastBrace + 1);
+  }
   let parsed;
-  try { parsed = JSON.parse(clean); } catch (e) { return res.status(200).json({ ok: false, error: "Couldn't parse Claude's response." }); }
+  try {
+    parsed = JSON.parse(clean);
+  } catch (e) {
+    return res.status(200).json({
+      ok: false,
+      error: "Couldn't parse Claude's response.",
+      rawResponsePreview: text.slice(0, 1500),
+      stopReason: data.stop_reason || null
+    });
+  }
   const score = Number(parsed.score);
   const max = Number(parsed.max) || 100;
   if (isNaN(score)) return res.status(200).json({ ok: false, error: "Claude's response didn't include a usable score." });
