@@ -675,7 +675,9 @@ async function onRunAIMark(id, btn) {
   if (!res.ok) {
     let msg = esc(res.error || 'Something went wrong while marking.');
     if (res.stopReason) msg += `<br><span style="color:var(--text-soft); font-size:12px;">Stop reason: ${esc(res.stopReason)}</span>`;
-    if (res.rawResponsePreview) msg += `<br><details style="margin-top:6px;"><summary style="cursor:pointer; color:var(--text-soft); font-size:12px;">Show Claude's raw reply</summary><pre style="white-space:pre-wrap; font-size:11.5px; background:#F9FAFB; padding:8px; border-radius:6px; margin-top:6px;">${esc(res.rawResponsePreview)}</pre></details>`;
+    if (res.usage) msg += `<br><span style="color:var(--text-soft); font-size:12px;">Tokens — input: ${esc(res.usage.input_tokens)}, output: ${esc(res.usage.output_tokens)}</span>`;
+    if (res.rawContentStructure) msg += `<br><span style="color:var(--text-soft); font-size:12px;">Content blocks: ${esc(res.rawContentStructure)}</span>`;
+    if (res.rawResponsePreview !== undefined) msg += `<br><details style="margin-top:6px;"><summary style="cursor:pointer; color:var(--text-soft); font-size:12px;">Show Claude's raw reply</summary><pre style="white-space:pre-wrap; font-size:11.5px; background:#F9FAFB; padding:8px; border-radius:6px; margin-top:6px;">${esc(res.rawResponsePreview)}</pre></details>`;
     panel.innerHTML = `<p class="msg err">${msg}</p>`;
     return;
   }
