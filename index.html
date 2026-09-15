@@ -823,6 +823,7 @@ function renderAIResult(id, result) {
   panel.innerHTML = `
     <div class="panel" style="margin-top:8px; background:#FBFAFF;">
       <h2>Claude's suggested mark</h2>
+      ${result.wasRepaired ? `<p style="font-size:12.5px; color:var(--red-text); background:var(--amber-bg); padding:8px 12px; border-radius:6px; margin-bottom:14px;">Claude's response got cut off before finishing — this breakdown may be missing the last question(s). Double-check the total and consider re-running if it looks incomplete.</p>` : ''}
       <div class="grid3" style="margin-bottom:16px;">
         <div class="f"><label>Score</label><input type="number" id="aiScoreInput" min="0" value="${result.score}"></div>
         <div class="f"><label>Out of</label><input type="number" id="aiMaxInput" min="1" value="${result.max}"></div>
