@@ -113,3 +113,7 @@ async function handleRequest(req, res) {
   if (isNaN(score)) return res.status(200).json({ ok: false, error: "Claude's response didn't include a usable score." });
   return res.status(200).json({ ok: true, score, max, feedback: String(parsed.feedback || '') });
 }
+
+export const config = {
+  maxDuration: 60
+};
