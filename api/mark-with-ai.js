@@ -102,8 +102,10 @@ async function handleRequest(req, res) {
     return res.status(200).json({
       ok: false,
       error: "Couldn't parse Claude's response.",
-      rawResponsePreview: text.slice(0, 1500),
-      stopReason: data.stop_reason || null
+      rawResponsePreview: text || '(no text content in the response)',
+      rawContentStructure: JSON.stringify((data.content || []).map(b => ({ type: b.type, textLength: b.text ? b.text.length : null }))),
+      stopReason: data.stop_reason || null,
+      usage: data.usage || null
     });
   }
   const score = Number(parsed.score);
