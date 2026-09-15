@@ -94,7 +94,7 @@ async function handleRequest(req, res) {
   }
 
   if (body.action === 'save') {
-    const { id, score, max, feedback } = body;
+    const { id, score, max, feedback, questions } = body;
     if (!id || !id.startsWith('mark_')) return res.status(400).json({ ok: false, error: 'Invalid submission id.' })
     const rec = await kvGet(id);
     if (!rec) return res.status(404).json({ ok: false, error: 'Submission not found.' })
@@ -105,6 +105,7 @@ async function handleRequest(req, res) {
     rec.score = score;
     rec.max = max;
     rec.feedback = feedback;
+    rec.questions = Array.isArray(questions) ? questions : [];
     rec.gradedBy = actor.role === 'student' ? 'Claude (automatic)' : actor.username;
     rec.markedByAI = true;
     rec.markedDate = new Date().toISOString().slice(0, 10);
