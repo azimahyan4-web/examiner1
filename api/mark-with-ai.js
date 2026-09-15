@@ -77,7 +77,7 @@ async function handleRequest(req, res) {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 16000, system: system, messages: [{ role: 'user', content: content }] })
+    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 32000, system: system, messages: [{ role: 'user', content: content }] })
   });
 
   if (!anthropicRes.ok) {
