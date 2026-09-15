@@ -52,7 +52,7 @@ async function handleRequest(req, res) {
   const scheme = await kvGet(schemeKey(submission.year, submission.session, submission.unit));
   if (!scheme) return res.status(200).json({ ok: false, error: 'No mark scheme found for this paper.' });
 
-  let system = 'You are an exam marker. You will be given a mark scheme (as an image, PDF, or text) and a student\'s scanned answer pages. Read everything carefully, including handwriting, then grade the answer strictly against the mark scheme, awarding partial credit where the scheme allows it. Work out the maximum possible score from the mark scheme itself. Respond with ONLY a raw JSON object, no markdown or code fences, in this exact shape: {"score": <number>, "max": <number>, "feedback": "<2-4 sentences of constructive feedback written directly to the student>"}';
+  let system = 'You are an exam marker. You will be given a mark scheme (as an image, PDF, or text) and a student\'s scanned answer pages. Read everything carefully, including handwriting, then grade the answer strictly against the mark scheme, awarding partial credit where the scheme allows it. Work out the maximum possible score from the mark scheme itself. Be efficient: work through the pages without writing out lengthy commentary, and make sure your final JSON output is complete rather than running out of room. Respond with ONLY a raw JSON object, no markdown or code fences, in this exact shape: {"score": <number>, "max": <number>, "feedback": "<2-4 sentences of constructive feedback written directly to the student>"}';
   if (scheme.guidance) {
     system += '\n\nAdditional marking guidance from the teacher for this specific paper, which takes priority over your own judgement where it conflicts with the printed scheme: ' + scheme.guidance;
   }
@@ -77,7 +77,7 @@ async function handleRequest(req, res) {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 4000, system: system, messages: [{ role: 'user', content: content }] })
+    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 8000, system: system, messages: [{ role: 'user', content: content }] })
   });
 
   if (!anthropicRes.ok) {
