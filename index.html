@@ -304,7 +304,7 @@ function renderTopbarActions() {
    ========================================================================= */
 function esc(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
 function yearOptions() { const now = new Date().getFullYear(); let opts = ''; for (let y = now + 1; y >= now - 5; y--) opts += `<option value="${y}">${y}</option>`; return opts; }
-function yearList() { const now = new Date().getFullYear(); const arr = []; for (let y = now - 2; y <= now + 1; y++) arr.push(y); return arr; }
+function yearList() { const now = new Date().getFullYear(); const arr = []; for (let y = now - 4; y <= now + 1; y++) arr.push(y); return arr; }
 
 let reportRowsCache = {};
 
