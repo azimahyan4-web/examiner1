@@ -578,6 +578,9 @@ function readAsDataURL(file) {
   });
 }
 async function fileToSchemeRecord(file) {
+  if (file.size > 3.2 * 1024 * 1024) {
+    throw new Error(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB) to upload in one go — try a lower-resolution scan or a more compressed PDF, ideally under 3MB.`);
+  }
   if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
     return { name: file.name, kind: 'text', content: await file.text() };
   } else if (file.type === 'application/pdf') {
@@ -1235,32 +1238,60 @@ async function onSubmitForMarking() {
   const question = document.getElementById('submitQuestion').value.trim() || 'Whole paper';
   const s = studentSelection;
   const pages = studentPages.map(p => ({ name: p.name, mediaType: p.mediaType, base64: p.base64 }));
-  const approxBytes = pages.reduce((sum, p) => sum + p.base64.length * 0.75, 0);
-  if (approxBytes > 9 * 1024 * 1024) {
+
+  // Each page is uploaded as its own request, so only a single very large
+  // page (unlikely after compression) would hit the server's per-request
+  // size limit — not the submission as a whole, however many pages it has.
+  const oversizedPage = pages.find(p => p.base64.length * 0.75 > 3.5 * 1024 * 1024);
+  if (oversizedPage) {
     msg.className = 'msg err';
-    msg.textContent = `This submission is large (${Math.round(approxBytes / 1024 / 1024)}MB) and may be rejected by the server. If it fails, try submitting in two smaller batches instead of ${pages.length} pages at once.`;
+    msg.textContent = `"${oversizedPage.name}" is too large even after compression. Try a lower-resolution photo for that page.`;
+    return;
   }
+
   const btn = document.getElementById('submitForMarkingBtn');
   btn.disabled = true;
   btn.textContent = 'Submitting…';
+  msg.className = 'msg';
+  msg.textContent = '';
 
-  // Step 1: save the submission. This is fast and must always succeed —
-  // marking happens as a separate follow-up call so a slow Claude response
-  // can never risk losing the submission itself.
-  const res = await marksApi('submit', { year: s.year, session: s.session, unit: s.unit, question, pages });
+  // Step 1: create the (empty) submission record. Fast and must always
+  // succeed — marking happens as a separate follow-up call so a slow Claude
+  // response can never risk losing the submission itself.
+  const res = await marksApi('submit', { year: s.year, session: s.session, unit: s.unit, question });
+  if (!res.ok) {
+    btn.disabled = false; btn.textContent = 'Submit for marking';
+    msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.';
+    return;
+  }
+  const id = res.id;
+
+  // Step 2: upload all pages in parallel. This is safe now because each
+  // page is stored as its own independent record on the server — nothing
+  // for simultaneous uploads to overwrite, unlike appending to a shared list.
+  btn.textContent = `Uploading ${pages.length} page${pages.length === 1 ? '' : 's'}…`;
+  const uploadResults = await Promise.all(
+    pages.map((page, i) => marksApi('add-page', { id, pageIndex: i, page }))
+  );
+  const failedCount = uploadResults.filter(r => !r.ok).length;
+  if (failedCount > 0) {
+    btn.disabled = false; btn.textContent = 'Submit for marking';
+    msg.className = 'msg err';
+    msg.textContent = `${failedCount} of ${pages.length} page(s) failed to upload. What did upload is saved — a teacher can still mark it manually, or you can try submitting again.`;
+    return;
+  }
+
   btn.disabled = false;
   btn.textContent = 'Submit for marking';
-  if (!res.ok) { msg.className = 'msg err'; msg.textContent = res.error || 'Something went wrong.'; return; }
-
   studentPages = [];
   studentSelection = { year: null, session: null, unit: null };
   studentView = 'select';
   await render(); // shows the new submission as Pending right away
 
-  // Step 2: trigger marking in the background and finalize it once done.
+  // Step 3: trigger marking in the background and finalize it once done.
   // If this fails for any reason, the submission simply stays Pending —
   // a teacher can still mark it manually from "Submissions to mark".
-  markThenSave(res.id);
+  markThenSave(id);
 }
 
 async function markThenSave(id) {
