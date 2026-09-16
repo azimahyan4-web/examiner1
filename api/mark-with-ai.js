@@ -9,6 +9,11 @@ async function kvGet(key) {
   const rows = await res.json();
   return (Array.isArray(rows) && rows[0]) ? rows[0].value : null;
 }
+async function kvList(prefix) {
+  const res = await fetch(process.env.SUPABASE_URL + '/rest/v1/kv_store?key=like.' + encodeURIComponent(prefix) + '*&select=key,value', { headers: sbHeaders() });
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
+}
 async function findActor(username, password) {
   const uname = keySafe(username);
   if (uname === 'admin') {
@@ -63,11 +68,19 @@ async function handleRequest(req, res) {
   if (!apiKey) return res.status(200).json({ ok: false, error: 'No Anthropic API key is set. Add one under Admin \u2192 AI marking settings.' });
 
   const submission = await kvGet(body.id);
-  if (!submission || !submission.pages || !submission.pages.length) return res.status(404).json({ ok: false, error: 'Submission not found or has no pages.' });
+  if (!submission) return res.status(404).json({ ok: false, error: 'Submission not found.' });
 
   // A student may only trigger marking for their own submission (used by the
   // automatic marking flow); teachers/admin may trigger for anyone's.
   if (actor.role === 'student' && submission.student !== actor.username) return res.status(403).json({ ok: false, error: 'Not authorized.' });
+
+  // Pages are stored as independent records (mark_..._page_0000, _page_0001,
+  // ...) rather than embedded in the submission itself, so uploads can
+  // happen in parallel without conflicting. Sort by key so pages come back
+  // in the original order.
+  const pageRows = (await kvList(body.id + '_page_')).sort((a, b) => a.key.localeCompare(b.key));
+  if (pageRows.length === 0) return res.status(404).json({ ok: false, error: 'Submission has no pages.' });
+  const pages = pageRows.map(r => r.value);
 
   const scheme = await kvGet(schemeKey(submission.year, submission.session, submission.unit));
   if (!scheme) return res.status(200).json({ ok: false, error: 'No mark scheme found for this paper.' });
@@ -86,7 +99,7 @@ async function handleRequest(req, res) {
     content.push({ type: 'image', source: { type: 'base64', media_type: scheme.file.mediaType, data: scheme.file.base64 } });
   }
   content.push({ type: 'text', text: "STUDENT'S ANSWER (scanned pages, in order):" });
-  submission.pages.forEach(p => content.push({ type: 'image', source: { type: 'base64', media_type: p.mediaType, data: p.base64 } }));
+  pages.forEach(p => content.push({ type: 'image', source: { type: 'base64', media_type: p.mediaType, data: p.base64 } }));
 
   // Vercel's infrastructure calls Anthropic directly — no proxy needed here,
   // unlike the EdgeOne version which was blocked at the network level.
