@@ -732,6 +732,65 @@ async function renderAdmin(main) {
 /* =========================================================================
    TEACHER DASHBOARD
    ========================================================================= */
+function weakTopicsHTML(marks) {
+  const withBreakdown = marks.filter(m => m.status === 'marked' && Array.isArray(m.questions) && m.questions.length > 0);
+  if (withBreakdown.length === 0) return `<p class="helper-text">No marked papers with a question breakdown yet — this fills in as papers get marked.</p>`;
+
+  // Group by paper (year/session/unit).
+  const papers = {};
+  withBreakdown.forEach(m => {
+    const key = `${m.year} ${m.session} • ${m.unit}`;
+    if (!papers[key]) papers[key] = { key, questionStats: {} };
+    m.questions.forEach(q => {
+      if (!q.question) return;
+      if (!papers[key].questionStats[q.question]) papers[key].questionStats[q.question] = { awarded: 0, available: 0, missedCounts: {}, studentCount: 0 };
+      const stat = papers[key].questionStats[q.question];
+      stat.awarded += q.marksAwarded || 0;
+      stat.available += q.marksAvailable || 0;
+      stat.studentCount += 1;
+      (q.pointsMissed || []).forEach(pt => {
+        if (!pt) return;
+        stat.missedCounts[pt] = (stat.missedCounts[pt] || 0) + 1;
+      });
+    });
+  });
+
+  const paperKeys = Object.keys(papers).sort();
+  return paperKeys.map(key => {
+    const stats = papers[key].questionStats;
+    const questionLabels = Object.keys(stats);
+    const rows = questionLabels.map(q => {
+      const s = stats[q];
+      const pct = s.available ? Math.round((s.awarded / s.available) * 100) : 100;
+      const topMissed = Object.entries(s.missedCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([pt, count]) => `${pt}${count > 1 ? ` (×${count})` : ''}`)
+        .join('; ');
+      return { q, pct, studentCount: s.studentCount, topMissed };
+    }).sort((a, b) => a.pct - b.pct); // weakest first
+
+    const rowsHTML = rows.map(r => `
+      <tr>
+        <td style="font-weight:700; white-space:nowrap;">${esc(r.q)}</td>
+        <td class="score-cell" style="white-space:nowrap;">${r.pct}%</td>
+        <td style="color:var(--text-soft); font-size:12.5px;">${r.studentCount} student${r.studentCount === 1 ? '' : 's'}</td>
+        <td>${r.topMissed ? esc(r.topMissed) : '<span style="color:var(--text-soft);">—</span>'}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="margin-bottom:22px;">
+        <div style="font-weight:700; font-size:14px; margin-bottom:8px;">${esc(key)}</div>
+        <table>
+          <thead><tr><th>Question</th><th>Class avg</th><th>Sample</th><th>Most common issues</th></tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+    `;
+  }).join('');
+}
+
 async function renderTeacher(main) {
   const [schemesRes, marksRes, usersRes] = await Promise.all([schemesApi('list'), marksApi('list'), authApiActed('list-users')]);
   const schemes = schemesRes.ok ? schemesRes.schemes : [];
@@ -758,10 +817,65 @@ async function renderTeacher(main) {
     </div>
     ${accessPanelHTML('student', 'Student')}
     <div class="panel"><h2>Student results</h2><p class="panel-sub">Papers you've marked, most recent first.</p>${resultsTableHTML(mine, { showFeedback: true })}</div>
+
+    <div class="panel">
+      <h2>Results by session</h2>
+      <p class="panel-sub">Pick a specific paper and see every student's mark for it in one table.</p>
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="f"><label>Year</label><select id="classYearSelect"><option value="">All years</option>${yearOptions()}</select></div>
+        <div class="f"><label>Session</label><select id="classSessionSelect"><option value="">All sessions</option>${SESSIONS.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
+        <div class="f"><label>Unit</label><select id="classUnitSelect"><option value="">All units</option>${UNITS.map(u => `<option value="${u}">${u}</option>`).join('')}</select></div>
+      </div>
+      <div id="classResults"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Results by student</h2>
+      <p class="panel-sub">View every marked paper for one student at a time, across all teachers.</p>
+      <div class="f" style="max-width:340px; margin-bottom:16px;">
+        <label>Student</label>
+        <select id="studentFilterSelect">
+          <option value="">Choose a student</option>
+          ${students.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div id="studentFilterResults"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Where marks are being lost</h2>
+      <p class="panel-sub">Question-level performance across every student who has sat each paper, weakest first — use this to spot topics worth revising as a class.</p>
+      ${weakTopicsHTML(marks)}
+    </div>
   `;
   wireSchemesPanel(schemes);
   wireAccessPanel('student', 'student', students);
   renderPendingList(pending);
+
+  const studentFilterSelect = document.getElementById('studentFilterSelect');
+  studentFilterSelect.addEventListener('change', (e) => {
+    const chosen = e.target.value;
+    const wrap = document.getElementById('studentFilterResults');
+    if (!chosen) { wrap.innerHTML = ''; return; }
+    const theirMarks = marks.filter(m => m.student === chosen).sort((a, b) => new Date(b.date) - new Date(a.date));
+    wrap.innerHTML = resultsTableHTML(theirMarks, { showFeedback: true });
+  });
+
+  function renderClassResults() {
+    const year = document.getElementById('classYearSelect').value;
+    const sessionVal = document.getElementById('classSessionSelect').value;
+    const unit = document.getElementById('classUnitSelect').value;
+    let filtered = marks;
+    if (year) filtered = filtered.filter(m => String(m.year) === String(year));
+    if (sessionVal) filtered = filtered.filter(m => m.session === sessionVal);
+    if (unit) filtered = filtered.filter(m => m.unit === unit);
+    filtered = filtered.slice().sort((a, b) => (a.student || '').localeCompare(b.student || ''));
+    document.getElementById('classResults').innerHTML = resultsTableHTML(filtered, { showFeedback: false });
+  }
+  ['classYearSelect', 'classSessionSelect', 'classUnitSelect'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderClassResults);
+  });
+  renderClassResults();
 }
 
 function renderPendingList(pending) {
@@ -862,6 +976,50 @@ async function renderStudent(main) {
   return renderStudentSelect(main);
 }
 
+function performanceBySessionHTML(marks) {
+  const marked = marks.filter(m => m.status !== 'pending');
+  if (marked.length === 0) return `<p class="helper-text">No marked papers yet.</p>`;
+
+  // Group by "year session" (a sitting), then by unit within that sitting.
+  const sittings = {};
+  marked.forEach(m => {
+    const sittingKey = `${m.year} ${m.session}`;
+    if (!sittings[sittingKey]) sittings[sittingKey] = { year: m.year, session: m.session, units: {} };
+    if (!sittings[sittingKey].units[m.unit]) sittings[sittingKey].units[m.unit] = [];
+    sittings[sittingKey].units[m.unit].push(m);
+  });
+
+  const sittingKeys = Object.keys(sittings).sort((a, b) => {
+    const sa = sittings[a], sb = sittings[b];
+    return (sb.year - sa.year) || SESSIONS.indexOf(sb.session) - SESSIONS.indexOf(sa.session);
+  });
+
+  return sittingKeys.map(key => {
+    const sitting = sittings[key];
+    const unitNames = Object.keys(sitting.units).sort();
+    const rows = unitNames.map(unit => {
+      const unitMarks = sitting.units[unit];
+      const totalScore = unitMarks.reduce((s, m) => s + m.score, 0);
+      const totalMax = unitMarks.reduce((s, m) => s + m.max, 0);
+      const avgPct = totalMax ? Math.round((totalScore / totalMax) * 100) : 0;
+      return `<tr>
+        <td style="font-weight:700;">${esc(unit)}</td>
+        <td>${unitMarks.length}</td>
+        <td class="score-cell">${avgPct}%</td>
+      </tr>`;
+    }).join('');
+    return `
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700; font-size:14px; margin-bottom:8px;">${esc(key)}</div>
+        <table>
+          <thead><tr><th>Unit</th><th>Papers</th><th>Average</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).join('');
+}
+
 async function renderStudentSelect(main) {
   const marksRes = await marksApi('list');
   const marks = (marksRes.ok ? marksRes.marks : []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -900,6 +1058,12 @@ async function renderStudentSelect(main) {
     ` : ''}
 
     <div class="panel" style="margin-top:32px;">
+      <h2>My performance by unit</h2>
+      <p class="panel-sub">Marks grouped by unit, separately for each session, with your average for each.</p>
+      ${performanceBySessionHTML(marks)}
+    </div>
+
+    <div class="panel" style="margin-top:20px;">
       <h2>My results</h2>
       <p class="panel-sub">Every paper you've submitted, most recent first.</p>
       ${resultsTableHTML(marks.map(m => ({ student: session.username, ...m })), { showFeedback: true })}
