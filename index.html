@@ -1265,8 +1265,8 @@ async function onSubmitForMarking() {
 
 async function markThenSave(id) {
   const aiRes = await markWithAI(id);
-  if (!aiRes.ok) return; // stays Pending; nothing else to do here
-  await marksApi('save', { id, score: aiRes.score, max: aiRes.max, feedback: aiRes.feedback });
+  if (!aiRes.ok) return; // stays Pending; a teacher can still mark it manually as a fallback
+  await marksApi('save', { id, score: aiRes.score, max: aiRes.max, feedback: aiRes.feedback, questions: aiRes.questions || [] });
   // Refresh the view if the student is still looking at their results.
   if (session && session.role === 'student' && studentView === 'select') render();
 }
